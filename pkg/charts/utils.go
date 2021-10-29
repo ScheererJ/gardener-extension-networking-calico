@@ -18,19 +18,20 @@ import (
 	"encoding/json"
 	"fmt"
 
-	gardenv1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-
 	calicov1alpha1 "github.com/gardener/gardener-extension-networking-calico/pkg/apis/calico/v1alpha1"
 	"github.com/gardener/gardener-extension-networking-calico/pkg/calico"
 	"github.com/gardener/gardener-extension-networking-calico/pkg/imagevector"
-
+	gardenv1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+
+	corev1 "k8s.io/api/core/v1"
 )
 
 const (
-	hostLocal  = "host-local"
-	usePodCIDR = "usePodCidr"
-	defaultMTU = "1440"
+	hostLocal   = "host-local"
+	usePodCIDR  = "usePodCidr"
+	defaultMTU  = "1440"
+	blockAccess = "BLOCK_ACCESS"
 )
 
 type calicoConfig struct {
@@ -89,6 +90,11 @@ type typha struct {
 	Enabled bool `json:"enabled"`
 }
 
+type egressFilterEntry struct {
+	Network string
+	Policy  string
+}
+
 var defaultCalicoConfig = calicoConfig{
 	Backend: calicov1alpha1.Bird,
 	Felix: felix{
@@ -143,7 +149,7 @@ func (c *calicoConfig) toMap() (map[string]interface{}, error) {
 }
 
 // ComputeCalicoChartValues computes the values for the calico chart.
-func ComputeCalicoChartValues(network *extensionsv1alpha1.Network, config *calicov1alpha1.NetworkConfig, workerSystemComponentsActivated bool, kubernetesVersion string, wantsVPA bool, kubeProxyEnabled bool) (map[string]interface{}, error) {
+func ComputeCalicoChartValues(network *extensionsv1alpha1.Network, config *calicov1alpha1.NetworkConfig, workerSystemComponentsActivated bool, kubernetesVersion string, wantsVPA bool, kubeProxyEnabled bool, egressFilterSecret *corev1.Secret) (map[string]interface{}, error) {
 	typedConfig, err := generateChartValues(config, kubeProxyEnabled)
 	if err != nil {
 		return nil, fmt.Errorf("error when generating calico config: %v", err)
@@ -175,6 +181,13 @@ func ComputeCalicoChartValues(network *extensionsv1alpha1.Network, config *calic
 			gardenv1beta1constants.LabelWorkerPoolSystemComponents: "true",
 		}
 	}
+
+	calicoChartValues["egressFilterSet"], err = generateEgressFilterValues(egressFilterSecret)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Printf("Values: %s\n", calicoChartValues)
 
 	return calicoChartValues, nil
 }
@@ -261,4 +274,18 @@ func generateChartValues(config *calicov1alpha1.NetworkConfig, kubeProxyEnabled 
 	}
 
 	return &c, nil
+}
+
+func generateEgressFilterValues(egressFilterSecret *corev1.Secret) ([]string, error) {
+	var entries []egressFilterEntry
+	if err := json.Unmarshal(egressFilterSecret.Data["list"], &entries); err != nil {
+		return nil, fmt.Errorf("error parsing egress filter list: %w", err)
+	}
+	result := []string{}
+	for _, entry := range entries {
+		if entry.Policy == blockAccess {
+			result = append(result, entry.Network)
+		}
+	}
+	return result, nil
 }

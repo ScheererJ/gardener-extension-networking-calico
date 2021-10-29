@@ -20,14 +20,15 @@ import (
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const CalicoConfigKey = "config.yaml"
 
 // RenderCalicoChart renders the calico chart with the given values.
-func RenderCalicoChart(renderer chartrenderer.Interface, network *extensionsv1alpha1.Network, config *calicov1alpha1.NetworkConfig, workerSystemComponentsActivated bool, kubernetesVersion string, wantsVPA bool, kubeProxyEnabled bool) ([]byte, error) {
-	values, err := ComputeCalicoChartValues(network, config, workerSystemComponentsActivated, kubernetesVersion, wantsVPA, kubeProxyEnabled)
+func RenderCalicoChart(renderer chartrenderer.Interface, network *extensionsv1alpha1.Network, config *calicov1alpha1.NetworkConfig, workerSystemComponentsActivated bool, kubernetesVersion string, wantsVPA bool, kubeProxyEnabled bool, egressFilterSecret *corev1.Secret) ([]byte, error) {
+	values, err := ComputeCalicoChartValues(network, config, workerSystemComponentsActivated, kubernetesVersion, wantsVPA, kubeProxyEnabled, egressFilterSecret)
 	if err != nil {
 		return nil, err
 	}

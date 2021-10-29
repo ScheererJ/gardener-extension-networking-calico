@@ -17,6 +17,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"os"
 
 	calicov1alpha1 "github.com/gardener/gardener-extension-networking-calico/pkg/apis/calico/v1alpha1"
 	calicov1alpha1helper "github.com/gardener/gardener-extension-networking-calico/pkg/apis/calico/v1alpha1/helper"
@@ -31,6 +32,7 @@ import (
 	gardenerkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/chart"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -126,7 +128,20 @@ func (a *actuator) Reconcile(ctx context.Context, network *extensionsv1alpha1.Ne
 		return fmt.Errorf("could not create chart renderer for shoot '%s': %w", network.Namespace, err)
 	}
 
-	calicoChart, err := charts.RenderCalicoChart(chartRenderer, network, networkConfig, activateSystemComponentsNodeSelector(cluster.Shoot), cluster.Shoot.Spec.Kubernetes.Version, gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(cluster.Shoot), kubeProxyEnabled)
+	egressFilterSecret := corev1.Secret{}
+	key := types.NamespacedName{
+		Name:      "egress-filter-list",
+		Namespace: os.Getenv("LEADER_ELECTION_NAMESPACE"),
+	}
+
+	if err = a.client.Get(ctx, key, &egressFilterSecret); err != nil {
+		return fmt.Errorf("Couldn't get secret \"egress-filter-list\": %w", err)
+	}
+	if egressFilterSecret.Data["list"] == nil {
+		return fmt.Errorf("\"list\" is missing from \"egress-filter-list\" secret.")
+	}
+
+	calicoChart, err := charts.RenderCalicoChart(chartRenderer, network, networkConfig, activateSystemComponentsNodeSelector(cluster.Shoot), cluster.Shoot.Spec.Kubernetes.Version, gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(cluster.Shoot), kubeProxyEnabled, &egressFilterSecret)
 	if err != nil {
 		return err
 	}

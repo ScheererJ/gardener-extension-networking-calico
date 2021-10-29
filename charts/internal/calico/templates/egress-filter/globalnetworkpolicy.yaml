@@ -1,0 +1,12 @@
+apiVersion: crd.projectcalico.org/v1
+kind: GlobalNetworkPolicy
+metadata:
+  name: egress-filter-policy
+spec:
+  order: 100
+  types:
+  - Egress
+  egress:
+  - action: Deny
+    destination:
+      selector: egress == 'filter'

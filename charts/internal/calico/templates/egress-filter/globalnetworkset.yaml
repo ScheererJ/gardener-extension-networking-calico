@@ -1,0 +1,11 @@
+apiVersion: crd.projectcalico.org/v1
+kind: GlobalNetworkSet
+metadata:
+  name: egress-filter-set
+  labels:
+    egress: filter
+spec:
+  nets:
+{{- if .Values.egressFilterSet }}
+{{ toYaml .Values.egressFilterSet | indent 4 }}
+{{- end }}
