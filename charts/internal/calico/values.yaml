@@ -25,6 +25,8 @@ config:
       enabled: "false"
     bpfKubeProxyIPTablesCleanup:
       enabled: "false"
+  egressFilter:
+    enabled: false
 images:
   calico-node: "image-repository:image-tag"
   calico-cni: "image-repository:image-tag"

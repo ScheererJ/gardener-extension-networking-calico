@@ -40,3 +40,5 @@ config:
     contentType: application/json
     qps: 100
     burst: 130
+  egressFilter:
+    enabled: false

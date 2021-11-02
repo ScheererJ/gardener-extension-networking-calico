@@ -46,6 +46,10 @@ spec:
         - name: IMAGEVECTOR_OVERWRITE
           value: /charts_overwrite/images_overwrite.yaml
         {{- end }}
+        {{- if .Values.config.egressFilter.enabled }}
+        - name: EGRESS_FILTER_ENABLED
+          value: "true"
+        {{- end }}
 {{- if .Values.resources }}
         resources:
 {{ toYaml .Values.resources | nindent 10 }}

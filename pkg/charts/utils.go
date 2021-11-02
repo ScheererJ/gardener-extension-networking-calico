@@ -17,6 +17,7 @@ package charts
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 
 	calicov1alpha1 "github.com/gardener/gardener-extension-networking-calico/pkg/apis/calico/v1alpha1"
 	"github.com/gardener/gardener-extension-networking-calico/pkg/calico"
@@ -43,6 +44,7 @@ type calicoConfig struct {
 	KubeControllers kubeControllers        `json:"kubeControllers"`
 	VethMTU         string                 `json:"veth_mtu"`
 	Monitoring      monitoring             `json:"monitoring"`
+	EgressFilter    egressFilter           `json:"egressFilter"`
 }
 
 type felix struct {
@@ -90,6 +92,10 @@ type typha struct {
 	Enabled bool `json:"enabled"`
 }
 
+type egressFilter struct {
+	Enabled bool `json:"enabled"`
+}
+
 type egressFilterEntry struct {
 	Network string
 	Policy  string
@@ -128,6 +134,9 @@ var defaultCalicoConfig = calicoConfig{
 		Enabled:          true,
 		FelixMetricsPort: "9091",
 		TyphaMetricsPort: "9093",
+	},
+	EgressFilter: egressFilter{
+		Enabled: os.Getenv("EGRESS_FILTER_ENABLED") == "true",
 	},
 }
 
@@ -182,9 +191,11 @@ func ComputeCalicoChartValues(network *extensionsv1alpha1.Network, config *calic
 		}
 	}
 
-	calicoChartValues["egressFilterSet"], err = generateEgressFilterValues(egressFilterSecret)
-	if err != nil {
-		return nil, err
+	if typedConfig.EgressFilter.Enabled {
+		calicoChartValues["egressFilterSet"], err = generateEgressFilterValues(egressFilterSecret)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	fmt.Printf("Values: %s\n", calicoChartValues)

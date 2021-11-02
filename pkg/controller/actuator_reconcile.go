@@ -129,16 +129,18 @@ func (a *actuator) Reconcile(ctx context.Context, network *extensionsv1alpha1.Ne
 	}
 
 	egressFilterSecret := corev1.Secret{}
-	key := types.NamespacedName{
-		Name:      "egress-filter-list",
-		Namespace: os.Getenv("LEADER_ELECTION_NAMESPACE"),
-	}
 
-	if err = a.client.Get(ctx, key, &egressFilterSecret); err != nil {
-		return fmt.Errorf("Couldn't get secret \"egress-filter-list\": %w", err)
-	}
-	if egressFilterSecret.Data["list"] == nil {
-		return fmt.Errorf("\"list\" is missing from \"egress-filter-list\" secret.")
+	if os.Getenv("EGRESS_FILTER_ENABLED") == "true" {
+		key := types.NamespacedName{
+			Name:      "egress-filter-list",
+			Namespace: os.Getenv("LEADER_ELECTION_NAMESPACE"),
+		}
+		if err = a.client.Get(ctx, key, &egressFilterSecret); err != nil {
+			return fmt.Errorf("could not get secret \"egress-filter-list\": %w", err)
+		}
+		if egressFilterSecret.Data["list"] == nil {
+			return fmt.Errorf("\"list\" is missing from \"egress-filter-list\" secret")
+		}
 	}
 
 	calicoChart, err := charts.RenderCalicoChart(chartRenderer, network, networkConfig, activateSystemComponentsNodeSelector(cluster.Shoot), cluster.Shoot.Spec.Kubernetes.Version, gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(cluster.Shoot), kubeProxyEnabled, &egressFilterSecret)
