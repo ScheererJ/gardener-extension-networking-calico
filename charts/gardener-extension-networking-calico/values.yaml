@@ -56,3 +56,4 @@ config:
     deployDefaultService: true
     downloaderSecretName: egress-filter-default-downloader-secret
     downloaderConfigMapName: egress-filter-default-downloader
+    downloadSchedule: "0 0 * * *"
