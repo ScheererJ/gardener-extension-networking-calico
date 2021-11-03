@@ -85,6 +85,9 @@ type NetworkConfig struct {
 	// EbpfDataplane enables the eBPF dataplane mode.
 	// +optional
 	EbpfDataplane *EbpfDataplane `json:"ebpfDataplane,omitempty"`
+	// EgressFilter allows to disable the egress filter if it is globally enabled
+	// +optional
+	EgressFilter *EgressFilter `json:"egressFilter,omitempty"`
 
 	// DEPRECATED.
 	// IPIP is the IPIP Mode for the IPv4 Pool (e.g. Always, Never, CrossSubnet)
@@ -127,5 +130,11 @@ type Typha struct {
 
 type EbpfDataplane struct {
 	// Enabled enables the eBPF dataplane mode.
+	Enabled bool `json:"enabled"`
+}
+
+// EgressFilter allows to disable the egress filter per shoot if it is globally enabled.
+type EgressFilter struct {
+	// Enabled allows to enabled/disable the egress filter if it is globally enabled, defaults to enabled.
 	Enabled bool `json:"enabled"`
 }

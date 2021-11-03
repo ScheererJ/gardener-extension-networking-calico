@@ -284,6 +284,11 @@ func generateChartValues(config *calicov1alpha1.NetworkConfig, kubeProxyEnabled 
 		c.VethMTU = *config.VethMTU
 	}
 
+	// Only allow the egress filter to be disabled via network config if it is globally enabled
+	if c.EgressFilter.Enabled && config.EgressFilter != nil {
+		c.EgressFilter.Enabled = config.EgressFilter.Enabled
+	}
+
 	return &c, nil
 }
 

@@ -126,6 +126,20 @@ EbpfDataplane
 </tr>
 <tr>
 <td>
+<code>egressFilter</code></br>
+<em>
+<a href="#calico.networking.extensions.gardener.cloud/v1alpha1.EgressFilter">
+EgressFilter
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>EgressFilter allows to disable the egress filter if it is globally enabled</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>ipip</code></br>
 <em>
 <a href="#calico.networking.extensions.gardener.cloud/v1alpha1.IPv4PoolMode">
@@ -199,6 +213,36 @@ bool
 </td>
 <td>
 <p>Enabled enables the eBPF dataplane mode.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="calico.networking.extensions.gardener.cloud/v1alpha1.EgressFilter">EgressFilter
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#calico.networking.extensions.gardener.cloud/v1alpha1.NetworkConfig">NetworkConfig</a>)
+</p>
+<p>
+<p>EgressFilter allows to disable the egress filter per shoot if it is globally enabled.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>enabled</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Enabled allows to enabled/disable the egress filter if it is globally enabled, defaults to enabled.</p>
 </td>
 </tr>
 </tbody>
