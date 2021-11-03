@@ -198,8 +198,6 @@ func ComputeCalicoChartValues(network *extensionsv1alpha1.Network, config *calic
 		}
 	}
 
-	fmt.Printf("Values: %s\n", calicoChartValues)
-
 	return calicoChartValues, nil
 }
 
