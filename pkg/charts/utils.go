@@ -291,6 +291,9 @@ func generateChartValues(config *calicov1alpha1.NetworkConfig, kubeProxyEnabled 
 }
 
 func generateEgressFilterValues(egressFilterSecret *corev1.Secret) ([]string, error) {
+	if egressFilterSecret.Data["list"] == nil {
+		return []string{}, nil
+	}
 	var entries []egressFilterEntry
 	if err := json.Unmarshal(egressFilterSecret.Data["list"], &entries); err != nil {
 		return nil, fmt.Errorf("error parsing egress filter list: %w", err)

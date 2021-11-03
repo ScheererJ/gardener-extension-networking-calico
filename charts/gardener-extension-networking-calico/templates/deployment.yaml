@@ -49,6 +49,8 @@ spec:
         {{- if .Values.config.egressFilter.enabled }}
         - name: EGRESS_FILTER_ENABLED
           value: "true"
+        - name: ALLOWED_TIME_IN_SECONDS_WITHOUT_EGRESS_LIST
+          value: {{ .Values.config.egressFilter.maxTimeInSecondsUntilFirstDownload | quote }}
         {{- end }}
 {{- if .Values.resources }}
         resources:

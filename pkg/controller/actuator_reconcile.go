@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
+	"time"
 
 	calicov1alpha1 "github.com/gardener/gardener-extension-networking-calico/pkg/apis/calico/v1alpha1"
 	calicov1alpha1helper "github.com/gardener/gardener-extension-networking-calico/pkg/apis/calico/v1alpha1/helper"
@@ -41,6 +43,26 @@ const (
 	// CalicoConfigSecretName is the name of the secret used for the managed resource of networking calico
 	CalicoConfigSecretName = "extension-networking-calico-config"
 )
+
+// Value of the environment variable indicating whether egress filtering is enabled or not
+var egressFilterEnabled bool
+
+// The point in time when strict egress filter handling should begin as the cron job is expected to be finished by then
+// (only meaningful if egressFilterEnabled is true)
+var strictEgressTime time.Time
+
+func init() {
+	egressFilterEnabled = os.Getenv("EGRESS_FILTER_ENABLED") == "true"
+	if egressFilterEnabled {
+		strictEgressTime = time.Now()
+		allowedSecondsAfterStart := os.Getenv("ALLOWED_TIME_IN_SECONDS_WITHOUT_EGRESS_LIST")
+		seconds, err := strconv.Atoi(allowedSecondsAfterStart)
+		if err == nil {
+			strictEgressTime = strictEgressTime.Add(time.Duration(seconds) * time.Second)
+		}
+	}
+
+}
 
 func withLocalObjectRefs(refs ...string) []corev1.LocalObjectReference {
 	var localObjectRefs []corev1.LocalObjectReference
@@ -130,15 +152,18 @@ func (a *actuator) Reconcile(ctx context.Context, network *extensionsv1alpha1.Ne
 
 	egressFilterSecret := corev1.Secret{}
 
-	if os.Getenv("EGRESS_FILTER_ENABLED") == "true" {
+	if egressFilterEnabled {
 		key := types.NamespacedName{
 			Name:      "egress-filter-list",
 			Namespace: os.Getenv("LEADER_ELECTION_NAMESPACE"),
 		}
-		if err = a.client.Get(ctx, key, &egressFilterSecret); err != nil {
+		strict := time.Now().After(strictEgressTime)
+		if err = a.client.Get(ctx, key, &egressFilterSecret); err != nil && strict {
 			return fmt.Errorf("could not get secret \"egress-filter-list\": %w", err)
+		} else if err != nil {
+			a.logger.Info("secret \"egress-filter-list\" not available, yet, but still before strict time, reconciling shoot without egress filter", "shoot", network.Namespace)
 		}
-		if egressFilterSecret.Data["list"] == nil {
+		if egressFilterSecret.Data["list"] == nil && strict {
 			return fmt.Errorf("\"list\" is missing from \"egress-filter-list\" secret")
 		}
 	}
