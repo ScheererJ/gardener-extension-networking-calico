@@ -1,0 +1,21 @@
+{{- if .Values.config.egressFilter.enabled }}
+{{- if .Values.config.egressFilter.deployDefaultService }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: egress-filter-default-service
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: egress-filter-default-server
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  ports:
+    - port: 8080
+      protocol: TCP
+      targetPort: 80
+      name: egress-filter-default-server
+  selector:
+    app.kubernetes.io/name: egress-filter-default-server
+    app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+{{- end }}

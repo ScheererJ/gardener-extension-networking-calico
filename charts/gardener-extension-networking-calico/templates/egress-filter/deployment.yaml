@@ -1,0 +1,38 @@
+{{- if .Values.config.egressFilter.enabled }}
+{{- if .Values.config.egressFilter.deployDefaultDeployment }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: egress-filter-default-server
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: egress-filter-default-server
+    helm.sh/chart: egress-filter-default-server
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  revisionHistoryLimit: 0
+  replicas: {{ .Values.config.egressFilter.defaultDeploymentReplicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: egress-filter-default-server
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: egress-filter-default-server
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      priorityClassName: gardener-extension-networking-calico
+      containers:
+      - name: egress-filter-default-server
+        image: nginx
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        volumeMounts:
+        - name: content
+          mountPath: /usr/share/nginx/html
+      volumes:
+      - name: content
+        configMap:
+          name: {{ .Values.config.egressFilter.defaultContentConfigMapName }}
+{{- end }}
+{{- end }}

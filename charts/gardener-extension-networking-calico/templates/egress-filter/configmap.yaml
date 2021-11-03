@@ -1,0 +1,29 @@
+{{- if .Values.config.egressFilter.enabled }}
+{{- if .Values.config.egressFilter.deployDefaultDownloaderConfigMap }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: egress-filter-default-downloader
+  namespace: {{ .Release.Namespace }}
+data:
+  download.sh: |
+    #!/bin/sh -e
+    curl -s $EGRESSFILTERLISTADDRESS -o $LISTFILE
+
+{{- end }}
+
+{{- if .Values.config.egressFilter.deployDefaultContentConfigMap }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: egress-filter-default-content-configmap
+  namespace: {{ .Release.Namespace }}
+data:
+  list: |
+{{- if .Values.config.egressFilter.defaultFilterSet }}
+{{ toJson .Values.config.egressFilter.defaultFilterSet | indent 4 }}
+{{- end }}
+
+{{- end }}
+{{- end }}

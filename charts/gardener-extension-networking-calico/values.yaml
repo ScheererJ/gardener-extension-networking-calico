@@ -42,3 +42,17 @@ config:
     burst: 130
   egressFilter:
     enabled: false
+    defaultContentConfigMapName: egress-filter-default-content-configmap
+    defaultDeploymentReplicaCount: 1
+    defaultFilterSet: {}
+#   - network: 1.2.3.4/32
+#     policy: BLOCK_ACCESS
+#   - network: 4.3.2.1/32
+#     policy: BLOCK_ACCESS
+    deployDefaultContentConfigMap: true
+    deployDefaultDeployment: true
+    deployDefaultDownloaderConfigMap: true
+    deployDefaultDownloaderSecret: true
+    deployDefaultService: true
+    downloaderSecretName: egress-filter-default-downloader-secret
+    downloaderConfigMapName: egress-filter-default-downloader
