@@ -11,4 +11,8 @@ spec:
   - action: Deny
     destination:
       selector: egress == 'filter'
+  - action: Allow
+    destination:
+      nets:
+      - 0.0.0.0/0
 {{- end }}
