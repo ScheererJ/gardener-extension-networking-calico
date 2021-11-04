@@ -17,7 +17,6 @@ package charts
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 
 	calicov1alpha1 "github.com/gardener/gardener-extension-networking-calico/pkg/apis/calico/v1alpha1"
 	"github.com/gardener/gardener-extension-networking-calico/pkg/calico"
@@ -136,7 +135,7 @@ var defaultCalicoConfig = calicoConfig{
 		TyphaMetricsPort: "9093",
 	},
 	EgressFilter: egressFilter{
-		Enabled: os.Getenv("EGRESS_FILTER_ENABLED") == "true",
+		Enabled: false,
 	},
 }
 
@@ -158,8 +157,8 @@ func (c *calicoConfig) toMap() (map[string]interface{}, error) {
 }
 
 // ComputeCalicoChartValues computes the values for the calico chart.
-func ComputeCalicoChartValues(network *extensionsv1alpha1.Network, config *calicov1alpha1.NetworkConfig, workerSystemComponentsActivated bool, kubernetesVersion string, wantsVPA bool, kubeProxyEnabled bool, egressFilterSecret *corev1.Secret) (map[string]interface{}, error) {
-	typedConfig, err := generateChartValues(config, kubeProxyEnabled)
+func ComputeCalicoChartValues(network *extensionsv1alpha1.Network, config *calicov1alpha1.NetworkConfig, workerSystemComponentsActivated bool, kubernetesVersion string, wantsVPA bool, kubeProxyEnabled bool, egressFilterEnabled bool, egressFilterSecret *corev1.Secret) (map[string]interface{}, error) {
+	typedConfig, err := generateChartValues(config, kubeProxyEnabled, egressFilterEnabled)
 	if err != nil {
 		return nil, fmt.Errorf("error when generating calico config: %v", err)
 	}
@@ -201,7 +200,7 @@ func ComputeCalicoChartValues(network *extensionsv1alpha1.Network, config *calic
 	return calicoChartValues, nil
 }
 
-func generateChartValues(config *calicov1alpha1.NetworkConfig, kubeProxyEnabled bool) (*calicoConfig, error) {
+func generateChartValues(config *calicov1alpha1.NetworkConfig, kubeProxyEnabled bool, egressFilterEnabled bool) (*calicoConfig, error) {
 	c := newCalicoConfig()
 	if config == nil {
 		return &c, nil
@@ -282,6 +281,7 @@ func generateChartValues(config *calicov1alpha1.NetworkConfig, kubeProxyEnabled 
 		c.VethMTU = *config.VethMTU
 	}
 
+	c.EgressFilter.Enabled = egressFilterEnabled
 	// Only allow the egress filter to be disabled via network config if it is globally enabled
 	if c.EgressFilter.Enabled && config.EgressFilter != nil {
 		c.EgressFilter.Enabled = config.EgressFilter.Enabled

@@ -152,7 +152,7 @@ var _ = Describe("Chart package test", func() {
 
 	Describe("#ComputeCalicoChartValues", func() {
 		It("empty network config should properly render calico chart values", func() {
-			values, err := charts.ComputeCalicoChartValues(network, networkConfigNil, false, kubernetesVersion, false, true, &egressFilterSecret)
+			values, err := charts.ComputeCalicoChartValues(network, networkConfigNil, false, kubernetesVersion, false, true, false, &egressFilterSecret)
 			Expect(err).To(BeNil())
 			Expect(values).To(Equal(map[string]interface{}{
 				"images": map[string]interface{}{
@@ -214,7 +214,7 @@ var _ = Describe("Chart package test", func() {
 
 	Describe("#ComputeCalicoChartValues", func() {
 		It("should disable felix ip in ip and set pool mode to never when setting backend to none", func() {
-			values, err := charts.ComputeCalicoChartValues(network, networkConfigBackendNone, false, kubernetesVersion, false, true, &egressFilterSecret)
+			values, err := charts.ComputeCalicoChartValues(network, networkConfigBackendNone, false, kubernetesVersion, false, true, false, &egressFilterSecret)
 			Expect(err).To(BeNil())
 			Expect(values).To(Equal(map[string]interface{}{
 				"images": map[string]interface{}{
@@ -276,7 +276,7 @@ var _ = Describe("Chart package test", func() {
 
 	Describe("#ComputeAllCalicoChartValues", func() {
 		It("should correctly compute all of the calico chart values", func() {
-			values, err := charts.ComputeCalicoChartValues(network, networkConfigAll, false, kubernetesVersion, true, true, &egressFilterSecret)
+			values, err := charts.ComputeCalicoChartValues(network, networkConfigAll, false, kubernetesVersion, true, true, false, &egressFilterSecret)
 			Expect(err).To(BeNil())
 			Expect(values).To(Equal(map[string]interface{}{
 				"images": map[string]interface{}{
@@ -335,7 +335,7 @@ var _ = Describe("Chart package test", func() {
 			}))
 		})
 		It("should correctly compute all of the calico chart values with mtu", func() {
-			values, err := charts.ComputeCalicoChartValues(network, networkConfigAllMTU, false, kubernetesVersion, false, true, &egressFilterSecret)
+			values, err := charts.ComputeCalicoChartValues(network, networkConfigAllMTU, false, kubernetesVersion, false, true, false, &egressFilterSecret)
 			Expect(err).To(BeNil())
 			Expect(values).To(Equal(map[string]interface{}{
 				"images": map[string]interface{}{
@@ -394,7 +394,7 @@ var _ = Describe("Chart package test", func() {
 			}))
 		})
 		It("should correctly compute all of the calico chart values with ebpf dataplane enabled and kube-proxy disabled", func() {
-			values, err := charts.ComputeCalicoChartValues(network, networkConfigAllEBPFDataplane, false, kubernetesVersion, false, false, &egressFilterSecret)
+			values, err := charts.ComputeCalicoChartValues(network, networkConfigAllEBPFDataplane, false, kubernetesVersion, false, false, false, &egressFilterSecret)
 			Expect(err).To(BeNil())
 			Expect(values).To(Equal(map[string]interface{}{
 				"images": map[string]interface{}{
@@ -456,7 +456,7 @@ var _ = Describe("Chart package test", func() {
 
 	Describe("#ComputeAllCalicoChartValues", func() {
 		It("should respect deprecated fields in order to keep backwards compatibility", func() {
-			values, err := charts.ComputeCalicoChartValues(network, networkConfigDeprecated, false, kubernetesVersion, true, true, &egressFilterSecret)
+			values, err := charts.ComputeCalicoChartValues(network, networkConfigDeprecated, false, kubernetesVersion, true, true, false, &egressFilterSecret)
 			Expect(err).To(BeNil())
 			Expect(values).To(Equal(map[string]interface{}{
 				"images": map[string]interface{}{
@@ -518,7 +518,7 @@ var _ = Describe("Chart package test", func() {
 
 	Describe("#ActivatesSystemComponentNodeSelector", func() {
 		It("should set a nodeSelector when desired", func() {
-			values, err := charts.ComputeCalicoChartValues(network, networkConfigNil, true, kubernetesVersion, false, true, &egressFilterSecret)
+			values, err := charts.ComputeCalicoChartValues(network, networkConfigNil, true, kubernetesVersion, false, true, false, &egressFilterSecret)
 			Expect(err).To(BeNil())
 			Expect(values).To(Equal(map[string]interface{}{
 				"images": map[string]interface{}{
@@ -583,7 +583,7 @@ var _ = Describe("Chart package test", func() {
 
 	Describe("#ComputeInvalidCalicoChartValues", func() {
 		It("should error on invalid config value", func() {
-			_, err := charts.ComputeCalicoChartValues(network, networkConfigInvalid, false, kubernetesVersion, true, true, &egressFilterSecret)
+			_, err := charts.ComputeCalicoChartValues(network, networkConfigInvalid, false, kubernetesVersion, true, true, false, &egressFilterSecret)
 			Expect(err).To(Equal(fmt.Errorf("error when generating calico config: unsupported value for backend: invalid")))
 		})
 	})
@@ -605,7 +605,7 @@ var _ = Describe("Chart package test", func() {
 				},
 			}, nil)
 
-			_, err := charts.RenderCalicoChart(mockChartRenderer, network, networkConfigNil, false, kubernetesVersion, false, true, &egressFilterSecret)
+			_, err := charts.RenderCalicoChart(mockChartRenderer, network, networkConfigNil, false, kubernetesVersion, false, true, false, &egressFilterSecret)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})

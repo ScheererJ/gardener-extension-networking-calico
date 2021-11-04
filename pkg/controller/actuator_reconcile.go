@@ -43,10 +43,10 @@ const (
 )
 
 // Value of the environment variable indicating whether egress filtering is enabled or not
-var egressFilterEnabled bool
+var egressFilterGloballyEnabled bool
 
 func init() {
-	egressFilterEnabled = os.Getenv("EGRESS_FILTER_ENABLED") == "true"
+	egressFilterGloballyEnabled = os.Getenv("EGRESS_FILTER_ENABLED") == "true"
 }
 
 func withLocalObjectRefs(refs ...string) []corev1.LocalObjectReference {
@@ -136,7 +136,7 @@ func (a *actuator) Reconcile(ctx context.Context, network *extensionsv1alpha1.Ne
 	}
 
 	egressFilterSecret := corev1.Secret{}
-
+	egressFilterEnabled := egressFilterGloballyEnabled && cluster.Seed.Annotations["alpha.featuregates.seed.gardener.cloud/egress-filter"] == "true"
 	if egressFilterEnabled {
 		key := types.NamespacedName{
 			Name:      "egress-filter-list",
@@ -150,7 +150,7 @@ func (a *actuator) Reconcile(ctx context.Context, network *extensionsv1alpha1.Ne
 		}
 	}
 
-	calicoChart, err := charts.RenderCalicoChart(chartRenderer, network, networkConfig, activateSystemComponentsNodeSelector(cluster.Shoot), cluster.Shoot.Spec.Kubernetes.Version, gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(cluster.Shoot), kubeProxyEnabled, &egressFilterSecret)
+	calicoChart, err := charts.RenderCalicoChart(chartRenderer, network, networkConfig, activateSystemComponentsNodeSelector(cluster.Shoot), cluster.Shoot.Spec.Kubernetes.Version, gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(cluster.Shoot), kubeProxyEnabled, egressFilterEnabled, &egressFilterSecret)
 	if err != nil {
 		return err
 	}
