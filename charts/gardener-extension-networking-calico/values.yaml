@@ -57,4 +57,3 @@ config:
     downloaderSecretName: egress-filter-default-downloader-secret
     downloaderConfigMapName: egress-filter-default-downloader
     downloadSchedule: "0 0 * * *"
-    maxTimeInSecondsUntilFirstDownload: 90000
