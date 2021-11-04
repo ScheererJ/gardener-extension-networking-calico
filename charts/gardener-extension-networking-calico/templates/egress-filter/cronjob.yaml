@@ -13,7 +13,7 @@ spec:
           serviceAccountName: egress-filter-refresher
           containers:
           - name: egress-filter-refresher
-            image: docktofuture/egress-filter-refresher:v1
+            image: eu.gcr.io/gardener-project/gardener/egress-filter-refresher:0.1.0
             imagePullPolicy: IfNotPresent
             env:
             - name: NAMESPACE
