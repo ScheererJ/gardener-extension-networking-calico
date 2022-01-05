@@ -26,6 +26,25 @@ spec:
     spec:
       priorityClassName: gardener-extension-networking-calico
       serviceAccountName: gardener-extension-networking-calico
+      {{- if .Values.config.egressFilter.enabled }}
+      initContainers:
+      - name: initial-egress-filter-refresher
+        image: eu.gcr.io/gardener-project/gardener/egress-filter-refresher:0.2.0
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: LISTFILE
+          value: /tmp/list.json
+        envFrom:
+        - secretRef:
+            name: {{ .Values.config.egressFilter.downloaderSecretName }}
+        volumeMounts:
+          - mountPath: /downloader
+            name: egress-filter-downloader
+      {{- end }}
       containers:
       - name: gardener-extension-networking-calico
         image: {{ include "image" . }}
@@ -72,4 +91,10 @@ spec:
         configMap:
           name: {{ include "name" . }}-imagevector-overwrite
           defaultMode: 420
+      {{- end }}
+      {{- if .Values.config.egressFilter.enabled }}
+      - name: egress-filter-downloader
+        configMap:
+          name: {{ .Values.config.egressFilter.downloaderConfigMapName }}
+          defaultMode: 0777
       {{- end }}
