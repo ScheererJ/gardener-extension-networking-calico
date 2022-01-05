@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"os"
 
 	calicov1alpha1 "github.com/gardener/gardener-extension-networking-calico/pkg/apis/calico/v1alpha1"
 	"github.com/gardener/gardener-extension-networking-calico/pkg/calico"
@@ -217,8 +218,9 @@ func ComputeCalicoChartValues(network *extensionsv1alpha1.Network, config *calic
 			return nil, err
 		}
 		calicoChartValues["egressFilterSet"] = map[string]interface{}{
-			"ipv4": ipv4,
-			"ipv6": ipv6,
+			"blackholingEnabled": os.Getenv("EGRESS_FILTER_BLACKHOLING_ENABLED") == "true",
+			"ipv4":               ipv4,
+			"ipv6":               ipv6,
 		}
 	}
 

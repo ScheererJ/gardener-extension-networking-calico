@@ -40,7 +40,8 @@ vpa:
   enabled: false
 
 egressFilterSet:
-  ipv4: {}
-  ipv6: {}
+  blackholingEnabled: true
+  ipv4: []
+  ipv6: []
 
 # nodeSelector: {}

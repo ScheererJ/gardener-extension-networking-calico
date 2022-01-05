@@ -42,6 +42,7 @@ config:
     burst: 130
   egressFilter:
     enabled: false
+    blackholingEnabled: true
     defaultContentConfigMapName: egress-filter-default-content-configmap
     defaultDeploymentReplicaCount: 1
     defaultFilterSet: {}

@@ -39,7 +39,11 @@ spec:
       priorityClassName: system-node-critical
       containers:
         - name: egress-filter-applier
-          image: eu.gcr.io/gardener-project/gardener/egress-filter-blackholer:0.2.0
+          {{- if .Values.egressFilterSet.blackholingEnabled }}
+          image: eu.gcr.io/gardener-project/gardener/egress-filter-blackholer:0.3.0
+          {{- else }}
+          image: eu.gcr.io/gardener-project/gardener/egress-filter-firewaller:0.3.0
+          {{- end }}
           securityContext:
             capabilities:
               add:

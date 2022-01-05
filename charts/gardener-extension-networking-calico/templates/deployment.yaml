@@ -29,7 +29,7 @@ spec:
       {{- if .Values.config.egressFilter.enabled }}
       initContainers:
       - name: initial-egress-filter-refresher
-        image: eu.gcr.io/gardener-project/gardener/egress-filter-refresher:0.2.0
+        image: eu.gcr.io/gardener-project/gardener/egress-filter-refresher:0.3.0
         imagePullPolicy: IfNotPresent
         env:
         - name: NAMESPACE
@@ -68,6 +68,10 @@ spec:
         {{- if .Values.config.egressFilter.enabled }}
         - name: EGRESS_FILTER_ENABLED
           value: "true"
+        {{- if .Values.config.egressFilter.blackholingEnabled }}
+        - name: EGRESS_FILTER_BLACKHOLING_ENABLED
+          value: "true"
+        {{- end }}
         {{- end }}
 {{- if .Values.resources }}
         resources:
