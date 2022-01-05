@@ -39,6 +39,8 @@ images:
 vpa:
   enabled: false
 
-egressFilterSet: {}
+egressFilterSet:
+  ipv4: {}
+  ipv6: {}
 
 # nodeSelector: {}

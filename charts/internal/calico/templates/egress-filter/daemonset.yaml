@@ -1,0 +1,63 @@
+{{- if .Values.config.egressFilter.enabled }}
+kind: DaemonSet
+apiVersion: {{ include "daemonsetversion" . }}
+metadata:
+  name: egress-filter-applier
+  namespace: kube-system
+  labels:
+    k8s-app: egress-filter-applier
+    gardener.cloud/role: system-component
+spec:
+  selector:
+    matchLabels:
+      k8s-app: egress-filter-applier
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 100%
+  template:
+    metadata:
+      labels:
+        k8s-app: egress-filter-applier
+        gardener.cloud/role: system-component
+      annotations:
+        checksum/egress-filter-secret: {{ include (print $.Template.BasePath "/egress-filter/secret.yaml") . | sha256sum }}
+    spec:
+      hostNetwork: true
+      tolerations:
+        # Make sure egress-filter-applier gets scheduled on all nodes.
+        - effect: NoSchedule
+          operator: Exists
+        # Mark the pod as a critical add-on for rescheduling.
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - effect: NoExecute
+          operator: Exists
+      # Minimize downtime during a rolling upgrade or deletion; tell Kubernetes to do a "force
+      # deletion": https://kubernetes.io/docs/concepts/workloads/pods/pod/#termination-of-pods.
+      terminationGracePeriodSeconds: 0
+      priorityClassName: system-node-critical
+      containers:
+        - name: egress-filter-applier
+          image: eu.gcr.io/gardener-project/gardener/egress-filter-blackholer:0.2.0
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+          resources:
+            requests:
+              cpu: 10m
+              memory: 10Mi
+            limits:
+              cpu: 30m
+              memory: 30Mi
+          volumeMounts:
+          - name: lists
+            mountPath: /lists
+            readOnly: true
+      volumes:
+      - name: lists
+        secret:
+          secretName: egress-filter
+          defaultMode: 400
+{{- end }}

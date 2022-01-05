@@ -17,6 +17,7 @@ package charts
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 
 	calicov1alpha1 "github.com/gardener/gardener-extension-networking-calico/pkg/apis/calico/v1alpha1"
 	"github.com/gardener/gardener-extension-networking-calico/pkg/calico"
@@ -98,6 +99,26 @@ type egressFilter struct {
 type egressFilterEntry struct {
 	Network string
 	Policy  string
+}
+
+var privateIPv4Ranges []net.IPNet
+var privateIPv6Ranges []net.IPNet
+
+func init() {
+	// Private IP ranges (RFC1918)
+	_, ipv4Range10, _ := net.ParseCIDR("10.0.0.0/8")
+	_, ipv4Range172, _ := net.ParseCIDR("172.16.0.0/12")
+	_, ipv4Range192, _ := net.ParseCIDR("192.168.0.0/16")
+	// Carrier grade NAT (RFC6598)
+	_, ipv4Range100, _ := net.ParseCIDR("100.64.0.0/10")
+	// Link local (RFC3927)
+	_, ipv4Range169, _ := net.ParseCIDR("169.254.0.0/16")
+	// IPv6 link local (RFC4291)
+	_, ipv6RangeFE80, _ := net.ParseCIDR("fe80::/10")
+	// IPv6 unique local unicast (RFC4193)
+	_, ipv6RangeFC00, _ := net.ParseCIDR("fc00::/7")
+	privateIPv4Ranges = []net.IPNet{*ipv4Range10, *ipv4Range172, *ipv4Range192, *ipv4Range100, *ipv4Range169}
+	privateIPv6Ranges = []net.IPNet{*ipv6RangeFE80, *ipv6RangeFC00}
 }
 
 var defaultCalicoConfig = calicoConfig{
@@ -191,9 +212,13 @@ func ComputeCalicoChartValues(network *extensionsv1alpha1.Network, config *calic
 	}
 
 	if typedConfig.EgressFilter.Enabled {
-		calicoChartValues["egressFilterSet"], err = generateEgressFilterValues(egressFilterSecret)
+		ipv4, ipv6, err := generateEgressFilterValues(egressFilterSecret)
 		if err != nil {
 			return nil, err
+		}
+		calicoChartValues["egressFilterSet"] = map[string]interface{}{
+			"ipv4": ipv4,
+			"ipv6": ipv6,
 		}
 	}
 
@@ -290,19 +315,39 @@ func generateChartValues(config *calicov1alpha1.NetworkConfig, kubeProxyEnabled 
 	return &c, nil
 }
 
-func generateEgressFilterValues(egressFilterSecret *corev1.Secret) ([]string, error) {
+func generateEgressFilterValues(egressFilterSecret *corev1.Secret) ([]string, []string, error) {
 	if egressFilterSecret.Data["list"] == nil {
-		return []string{}, nil
+		return []string{}, []string{}, nil
 	}
 	var entries []egressFilterEntry
 	if err := json.Unmarshal(egressFilterSecret.Data["list"], &entries); err != nil {
-		return nil, fmt.Errorf("error parsing egress filter list: %w", err)
+		return nil, nil, fmt.Errorf("error parsing egress filter list: %w", err)
 	}
-	result := []string{}
+	ipv4 := []string{}
+	ipv6 := []string{}
+OUTER:
 	for _, entry := range entries {
 		if entry.Policy == blockAccess {
-			result = append(result, entry.Network)
+			ip, net, err := net.ParseCIDR(entry.Network)
+			if err != nil {
+				continue
+			}
+			if ip.To4() != nil {
+				for _, privateNet := range privateIPv4Ranges {
+					if privateNet.Contains(ip) {
+						continue OUTER
+					}
+				}
+				ipv4 = append(ipv4, net.String())
+			} else {
+				for _, privateNet := range privateIPv6Ranges {
+					if privateNet.Contains(ip) {
+						continue OUTER
+					}
+				}
+				ipv6 = append(ipv6, net.String())
+			}
 		}
 	}
-	return result, nil
+	return ipv4, ipv6, nil
 }
