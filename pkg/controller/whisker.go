@@ -11,11 +11,9 @@ import (
 
 	operatorv1 "github.com/tigera/operator/api/v1"
 	"github.com/tigera/operator/pkg/components"
-	"github.com/tigera/operator/pkg/render/common/meta"
 	"github.com/tigera/operator/pkg/render/whisker"
 	"github.com/tigera/operator/pkg/tls/certificatemanagement"
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -27,16 +25,14 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-var (
-	scheme *runtime.Scheme
-)
+var scheme *runtime.Scheme
 
 func init() {
 	scheme = runtime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 }
 
-func WhiskerResources() (map[string][]byte, error) {
+func WhiskerResources(keyPair certificatemanagement.KeyPairInterface, trustBundle certificatemanagement.TrustedBundleRO) (map[string][]byte, error) {
 	components.ComponentCalicoWhisker = components.Component{
 		Image:    "calico/whisker",
 		Version:  "v1.0.0",
@@ -60,8 +56,8 @@ func WhiskerResources() (map[string][]byte, error) {
 				Notifications: ptr.To(operatorv1.Disabled),
 			},
 		},
-		WhiskerBackendKeyPair: &whiskerBackendKeyPair{},
-		TrustedCertBundle:     &trustedBundleR0{},
+		WhiskerBackendKeyPair: keyPair,
+		TrustedCertBundle:     trustBundle,
 	})
 	if err := w.ResolveImages(nil); err != nil {
 		return nil, fmt.Errorf("could not resolve images: %w", err)
@@ -111,33 +107,3 @@ func WhiskerResources() (map[string][]byte, error) {
 	}
 	return result, nil
 }
-
-type whiskerBackendKeyPair struct{}
-
-func (w *whiskerBackendKeyPair) UseCertificateManagement() bool { return false }
-func (w *whiskerBackendKeyPair) BYO() bool                      { return false }
-func (w *whiskerBackendKeyPair) InitContainer(namespace string, securityContext *corev1.SecurityContext) corev1.Container {
-	return corev1.Container{}
-}
-func (w *whiskerBackendKeyPair) VolumeMount(osType meta.OSType) corev1.VolumeMount {
-	return corev1.VolumeMount{}
-}
-func (w *whiskerBackendKeyPair) VolumeMountKeyFilePath() string                        { return "" }
-func (w *whiskerBackendKeyPair) VolumeMountCertificateFilePath() string                { return "" }
-func (w *whiskerBackendKeyPair) Volume() corev1.Volume                                 { return corev1.Volume{} }
-func (w *whiskerBackendKeyPair) Secret(namespace string) *corev1.Secret                { return &corev1.Secret{} }
-func (w *whiskerBackendKeyPair) HashAnnotationKey() string                             { return "" }
-func (w *whiskerBackendKeyPair) HashAnnotationValue() string                           { return "" }
-func (w *whiskerBackendKeyPair) GetIssuer() certificatemanagement.CertificateInterface { return nil }
-func (w *whiskerBackendKeyPair) GetCertificatePEM() []byte                             { return nil }
-func (w *whiskerBackendKeyPair) GetName() string                                       { return "" }
-func (w *whiskerBackendKeyPair) GetNamespace() string                                  { return "" }
-
-type trustedBundleR0 struct{}
-
-func (t *trustedBundleR0) MountPath() string                  { return "" }
-func (t *trustedBundleR0) HashAnnotations() map[string]string { return map[string]string{} }
-func (t *trustedBundleR0) VolumeMounts(osType meta.OSType) []corev1.VolumeMount {
-	return []corev1.VolumeMount{}
-}
-func (t *trustedBundleR0) Volume() corev1.Volume { return corev1.Volume{} }
