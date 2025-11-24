@@ -1,6 +1,6 @@
 module github.com/gardener/gardener-extension-networking-calico
 
-go 1.24.0
+go 1.24.9
 
 toolchain go1.25.4
 
@@ -13,6 +13,8 @@ require (
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.85.0
 	github.com/spf13/cobra v1.10.1
 	github.com/spf13/pflag v1.0.10
+	github.com/tigera/operator v1.40.2
+	github.com/tigera/operator/api v0.0.0-20251124164116-51169984e2a4
 	go.uber.org/mock v0.6.0
 	golang.org/x/tools v0.38.0
 	helm.sh/helm/v3 v3.18.6
@@ -37,15 +39,23 @@ require (
 	github.com/PaesslerAG/jsonpath v0.1.2-0.20240726212847-3a740cf7976f // indirect
 	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
+	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/brunoga/deep v1.2.5 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/cloudflare/cfssl v1.6.5 // indirect
 	github.com/coreos/go-systemd/v22 v22.6.0 // indirect
 	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/elastic/cloud-on-k8s/v2 v2.0.0-20250129010100-648f902d9807 // indirect
+	github.com/elastic/go-sysinfo v1.13.1 // indirect
+	github.com/elastic/go-ucfg v0.8.8 // indirect
+	github.com/elastic/go-windows v1.0.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.12.2 // indirect
+	github.com/envoyproxy/gateway v1.5.0 // indirect
+	github.com/evanphx/json-patch v5.9.11+incompatible // indirect
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/fluent/fluent-operator/v3 v3.3.0 // indirect
@@ -57,19 +67,19 @@ require (
 	github.com/go-jose/go-jose/v4 v4.1.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
-	github.com/go-openapi/errors v0.22.0 // indirect
+	github.com/go-openapi/errors v0.22.1 // indirect
 	github.com/go-openapi/jsonpointer v0.21.1 // indirect
 	github.com/go-openapi/jsonreference v0.21.0 // indirect
 	github.com/go-openapi/swag v0.23.1 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
-	github.com/go-test/deep v1.1.0 // indirect
+	github.com/go-test/deep v1.1.1 // indirect
 	github.com/gobuffalo/flect v1.0.3 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/goccy/go-yaml v1.18.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/btree v1.1.3 // indirect
-	github.com/google/cel-go v0.25.0 // indirect
+	github.com/google/cel-go v0.26.0 // indirect
 	github.com/google/gnostic-models v0.7.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/pprof v0.0.0-20250403155104-27863c87afa6 // indirect
@@ -83,6 +93,8 @@ require (
 	github.com/huandu/xstrings v1.5.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/ironcore-dev/vgopath v0.1.5 // indirect
+	github.com/jinzhu/copier v0.3.5 // indirect
+	github.com/joeshaw/multierror v0.0.0-20140124173710-69b34d4ec901 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
@@ -98,13 +110,15 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/moby/spdystream v0.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
-	github.com/modern-go/reflect2 v1.0.2 // indirect
+	github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee // indirect
 	github.com/muhlemmer/gu v0.3.1 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f // indirect
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
 	github.com/nexucis/lamenv v0.5.2 // indirect
 	github.com/open-telemetry/opentelemetry-operator v0.137.0 // indirect
+	github.com/openshift/api v0.0.0-20240924220842-3c700b6cb32b // indirect
+	github.com/openshift/library-go v0.0.0-20240930172803-190f286b06b1 // indirect
 	github.com/perses/common v0.27.1-0.20250326140707-96e439b14e0e // indirect
 	github.com/perses/perses v0.51.0 // indirect
 	github.com/perses/perses-operator v0.2.0 // indirect
@@ -119,12 +133,16 @@ require (
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
-	github.com/stoewer/go-strcase v1.3.0 // indirect
+	github.com/stoewer/go-strcase v1.3.1 // indirect
+	github.com/tigera/api v0.0.0-20230406222214-ca74195900cb // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/zitadel/oidc/v3 v3.38.1 // indirect
 	github.com/zitadel/schema v1.3.1 // indirect
+	go.elastic.co/apm/module/apmzap/v2 v2.6.2 // indirect
+	go.elastic.co/apm/v2 v2.6.2 // indirect
+	go.elastic.co/fastjson v1.3.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/collector/featuregate v1.37.0 // indirect
 	go.opentelemetry.io/contrib/otelconf v0.18.0 // indirect
@@ -174,6 +192,7 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+	howett.net/plist v1.0.1 // indirect
 	istio.io/api v1.27.3 // indirect
 	istio.io/client-go v1.27.2 // indirect
 	k8s.io/apiextensions-apiserver v0.33.5 // indirect
@@ -190,8 +209,12 @@ require (
 	k8s.io/kubelet v0.33.5 // indirect
 	k8s.io/metrics v0.33.5 // indirect
 	sigs.k8s.io/controller-tools v0.18.0 // indirect
+	sigs.k8s.io/gateway-api v1.3.1-0.20250527223622-54df0a899c1c // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
+	sigs.k8s.io/secrets-store-csi-driver v1.4.8 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.7.0 // indirect
-	sigs.k8s.io/yaml v1.5.0 // indirect
+	sigs.k8s.io/yaml v1.6.0 // indirect
 )
+
+replace github.com/tigera/operator/api => github.com/tigera/operator/api v0.0.0-20251124164116-51169984e2a4
