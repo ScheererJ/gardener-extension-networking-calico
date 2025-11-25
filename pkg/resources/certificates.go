@@ -1,4 +1,4 @@
-package controller
+package resources
 
 import (
 	"context"
@@ -13,20 +13,17 @@ import (
 
 const caName = "calico"
 
-func NewCertificateManger(secretsManager secretsmanager.Interface) *certificateManager {
-	return &certificateManager{
+func NewCertificateManger(secretsManager secretsmanager.Interface) *CertificateManager {
+	return &CertificateManager{
 		sm: secretsManager,
 	}
 }
 
-type certificateManager struct {
+type CertificateManager struct {
 	sm secretsmanager.Interface
 }
 
-func (m *certificateManager) KeyPair(ctx context.Context, component, commonNameSuffix string) (certificatemanagement.KeyPairInterface, error) {
-	if _, err := m.getCA(caName); err != nil {
-		return nil, fmt.Errorf("getting ca: %w", err)
-	}
+func (m *CertificateManager) KeyPair(ctx context.Context, component, commonNameSuffix string) (certificatemanagement.KeyPairInterface, error) {
 	compCert, err := m.generateClientServerCert(ctx, component, caName, commonNameSuffix)
 	if err != nil {
 		return nil, fmt.Errorf("generating cert %w", err)
@@ -34,22 +31,21 @@ func (m *certificateManager) KeyPair(ctx context.Context, component, commonNameS
 	return certificatemanagement.NewKeyPair(compCert, []string{component}, "cluster.local"), nil
 }
 
-func (m *certificateManager) TrustBundle(ctx context.Context) (certificatemanagement.TrustedBundle, error) {
+func (m *CertificateManager) TrustBundle(ctx context.Context) (certificatemanagement.TrustedBundle, error) {
 	ca, err := m.getCA(caName)
 	if err != nil {
 		if !errors.Is(err, errNotFound) {
 			return nil, err
-		} else {
-			ca, err = m.generateCA(ctx, caName)
-			if err != nil {
-				return nil, err
-			}
+		}
+		ca, err = m.generateCA(ctx, caName)
+		if err != nil {
+			return nil, err
 		}
 	}
 	return certificatemanagement.CreateTrustedBundle(ca), nil
 }
 
-func (m *certificateManager) generateCA(ctx context.Context, name string) (*certificate, error) {
+func (m *CertificateManager) generateCA(ctx context.Context, name string) (*certificate, error) {
 	certSecret, err := m.sm.Generate(ctx, &secrets.CertificateSecretConfig{
 		Name:       name,
 		CommonName: name + "-ca",
@@ -66,7 +62,7 @@ func (m *certificateManager) generateCA(ctx context.Context, name string) (*cert
 
 var errNotFound = errors.New("not found")
 
-func (m *certificateManager) getCA(name string) (*certificate, error) {
+func (m *CertificateManager) getCA(name string) (*certificate, error) {
 	certSecret, found := m.sm.Get(name)
 	if !found {
 		return nil, errNotFound
@@ -77,7 +73,7 @@ func (m *certificateManager) getCA(name string) (*certificate, error) {
 	}, nil
 }
 
-func (m *certificateManager) generateClientServerCert(ctx context.Context, name, caName, commonNameSuffix string) (*corev1.Secret, error) {
+func (m *CertificateManager) generateClientServerCert(ctx context.Context, name, caName, commonNameSuffix string) (*corev1.Secret, error) {
 	return m.sm.Generate(ctx, &secrets.CertificateSecretConfig{
 		Name:       name,
 		CommonName: name + "-" + commonNameSuffix,

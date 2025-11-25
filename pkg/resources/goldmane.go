@@ -1,7 +1,6 @@
-package controller
+package resources
 
 import (
-	"bytes"
 	"fmt"
 	"strings"
 
@@ -11,12 +10,10 @@ import (
 	"github.com/tigera/operator/pkg/tls/certificatemanagement"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func GoldmaneResources(keyPair certificatemanagement.KeyPairInterface, trustBundle certificatemanagement.TrustedBundleRO) (map[string][]byte, error) {
+func Goldmane(keyPair certificatemanagement.KeyPairInterface, trustBundle certificatemanagement.TrustedBundleRO) ([]client.Object, error) {
 	comp := goldmane.Goldmane(&goldmane.Configuration{
 		Installation: &operatorv1.InstallationSpec{
 			Variant: operatorv1.Calico,
@@ -32,24 +29,14 @@ func GoldmaneResources(keyPair certificatemanagement.KeyPairInterface, trustBund
 	}
 	objsToCreate, _ := comp.Objects()
 
-	codec := serializer.NewCodecFactory(scheme)
-	si, ok := runtime.SerializerInfoForMediaType(codec.SupportedMediaTypes(), runtime.ContentTypeJSON)
-	if !ok {
-		return nil, fmt.Errorf("could not find encoder for media type %q", runtime.ContentTypeJSON)
-	}
-	result := map[string][]byte{}
 	for _, objToCreate := range objsToCreate {
 		objToCreate.SetNamespace(metav1.NamespaceSystem)
 		objToCreate.SetLabels(utils.MergeStringMaps(objToCreate.GetLabels(), map[string]string{
 			"app.kubernetes.io/name": "goldmane",
 			"k8s-app":                "goldmane",
 		}))
-		gvk, err := apiutil.GVKForObject(objToCreate, scheme)
-		if err != nil {
-			return nil, fmt.Errorf("could not get gvk for object %q of type %T: %w", objToCreate.GetName(), objToCreate, err)
-		}
-		if gvk.Kind == "Deployment" {
-			deployment := objToCreate.(*appsv1.Deployment)
+		deployment, ok := objToCreate.(*appsv1.Deployment)
+		if ok {
 			deployment.Spec.Selector = &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"k8s-app": "goldmane",
@@ -69,12 +56,6 @@ func GoldmaneResources(keyPair certificatemanagement.KeyPairInterface, trustBund
 				}
 			}
 		}
-		encoder := codec.EncoderForVersion(si.Serializer, gvk.GroupVersion())
-		buffer := bytes.Buffer{}
-		if err := encoder.Encode(objToCreate, &buffer); err != nil {
-			return nil, fmt.Errorf("could not encode object %q of type %T: %w", objToCreate.GetName(), objToCreate, err)
-		}
-		result[gvk.Kind+"-"+objToCreate.GetName()] = buffer.Bytes()
 	}
-	return result, nil
+	return objsToCreate, nil
 }

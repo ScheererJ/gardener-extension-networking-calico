@@ -2,10 +2,9 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package controller
+package resources
 
 import (
-	"bytes"
 	"fmt"
 	"strings"
 
@@ -15,22 +14,11 @@ import (
 	"github.com/tigera/operator/pkg/tls/certificatemanagement"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/ptr"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var scheme *runtime.Scheme
-
-func init() {
-	scheme = runtime.NewScheme()
-	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-}
-
-func WhiskerResources(keyPair certificatemanagement.KeyPairInterface, trustBundle certificatemanagement.TrustedBundleRO) (map[string][]byte, error) {
+func Whisker(keyPair certificatemanagement.KeyPairInterface, trustBundle certificatemanagement.TrustedBundleRO) ([]client.Object, error) {
 	/*components.ComponentCalicoWhisker = components.Component{
 		Image:    "calico/whisker",
 		Version:  "v1.0.0",
@@ -61,24 +49,14 @@ func WhiskerResources(keyPair certificatemanagement.KeyPairInterface, trustBundl
 		return nil, fmt.Errorf("could not resolve images: %w", err)
 	}
 	objsToCreate, _ := w.Objects()
-	codec := serializer.NewCodecFactory(scheme)
-	si, ok := runtime.SerializerInfoForMediaType(codec.SupportedMediaTypes(), runtime.ContentTypeJSON)
-	if !ok {
-		return nil, fmt.Errorf("could not find encoder for media type %q", runtime.ContentTypeJSON)
-	}
-	result := map[string][]byte{}
 	for _, objToCreate := range objsToCreate {
 		objToCreate.SetNamespace(metav1.NamespaceSystem)
 		objToCreate.SetLabels(utils.MergeStringMaps(objToCreate.GetLabels(), map[string]string{
 			"app.kubernetes.io/name": "whisker",
 			"k8s-app":                "whisker",
 		}))
-		gvk, err := apiutil.GVKForObject(objToCreate, scheme)
-		if err != nil {
-			return nil, fmt.Errorf("could not get gvk for object %q of type %T: %w", objToCreate.GetName(), objToCreate, err)
-		}
-		if gvk.Kind == "Deployment" {
-			deployment := objToCreate.(*appsv1.Deployment)
+		deployment, ok := objToCreate.(*appsv1.Deployment)
+		if ok {
 			deployment.Spec.Selector = &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"k8s-app": "whisker",
@@ -97,12 +75,6 @@ func WhiskerResources(keyPair certificatemanagement.KeyPairInterface, trustBundl
 				}
 			}
 		}
-		encoder := codec.EncoderForVersion(si.Serializer, gvk.GroupVersion())
-		buffer := bytes.Buffer{}
-		if err := encoder.Encode(objToCreate, &buffer); err != nil {
-			return nil, fmt.Errorf("could not encode object %q of type %T: %w", objToCreate.GetName(), objToCreate, err)
-		}
-		result[gvk.Kind+"-"+objToCreate.GetName()] = buffer.Bytes()
 	}
-	return result, nil
+	return objsToCreate, nil
 }

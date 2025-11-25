@@ -41,6 +41,7 @@ import (
 	"github.com/gardener/gardener-extension-networking-calico/pkg/calico"
 	chartspkg "github.com/gardener/gardener-extension-networking-calico/pkg/charts"
 	"github.com/gardener/gardener-extension-networking-calico/pkg/features"
+	"github.com/gardener/gardener-extension-networking-calico/pkg/resources"
 )
 
 const (
@@ -203,12 +204,12 @@ func (a *actuator) Reconcile(ctx context.Context, l logr.Logger, network *extens
 	if err != nil {
 		return fmt.Errorf("could not create shoot client for shoot '%s': %w", network.Namespace, err)
 	}
-	sm, err := manager.New(ctx, l, clock.RealClock{}, c, "kube-system", "calico", manager.Config{})
+	sm, err := manager.New(ctx, l, clock.RealClock{}, c, metav1.NamespaceSystem, calico.Name, manager.Config{})
 	if err != nil {
 		panic(err)
 	}
-	cm := NewCertificateManger(sm)
-	tr, err := cm.TrustBundle(context.Background())
+	cm := resources.NewCertificateManger(sm)
+	trustBundle, err := cm.TrustBundle(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -239,52 +240,16 @@ func (a *actuator) Reconcile(ctx context.Context, l logr.Logger, network *extens
 		return err
 	}
 
-	whiskerComponents := map[string][]byte{}
-	trustBundleConfigMap := tr.ConfigMap(metav1.NamespaceSystem)
-	gvk, err := apiutil.GVKForObject(trustBundleConfigMap, scheme)
+	operatorResources, err := resources.Resources(ctx, cm, trustBundle)
 	if err != nil {
-		return fmt.Errorf("could not get gvk for object %q of type %T: %w", trustBundleConfigMap.GetName(), trustBundleConfigMap, err)
+		return fmt.Errorf("generating calico operator resources: %w", err)
 	}
-	codec := serializer.NewCodecFactory(scheme)
-	si, ok := runtime.SerializerInfoForMediaType(codec.SupportedMediaTypes(), runtime.ContentTypeJSON)
-	if !ok {
-		return fmt.Errorf("could not find encoder for media type %q", runtime.ContentTypeJSON)
-	}
-	encoder := codec.EncoderForVersion(si.Serializer, gvk.GroupVersion())
-	buffer := bytes.Buffer{}
-	if err := encoder.Encode(trustBundleConfigMap, &buffer); err != nil {
-		return fmt.Errorf("could not encode object %q of type %T: %w", trustBundleConfigMap.GetName(), trustBundleConfigMap, err)
-	}
-	whiskerComponents[gvk.Kind+"-"+trustBundleConfigMap.GetName()] = buffer.Bytes()
-
-	key, err := cm.KeyPair(context.Background(), "goldmane", "client")
+	operatorBytes, err := serializeObjects(c.Scheme(), operatorResources)
 	if err != nil {
-		panic(err)
-	}
-	goldMane, err := GoldmaneResources(key, tr)
-	if err != nil {
-		panic(err)
-	}
-	for k, v := range goldMane {
-		whiskerComponents[k] = v
+		return fmt.Errorf("serialzing operator resources: %w", err)
 	}
 
-	whiskerKey, err := cm.KeyPair(context.Background(), "whisker", "client")
-	if err != nil {
-		panic(err)
-	}
-	whiskerData, err := WhiskerResources(whiskerKey, tr)
-	if err != nil {
-		panic(err)
-	}
-	for k, v := range whiskerData {
-		whiskerComponents[k] = v
-	}
-
-	data := map[string][]byte{chartspkg.CalicoConfigKey: calicoChart}
-	for k, v := range whiskerComponents {
-		data[k] = v
-	}
+	data := map[string][]byte{chartspkg.CalicoConfigKey: calicoChart, "operator-resources": operatorBytes}
 	if err := managedresources.CreateForShoot(ctx, a.client, network.Namespace, CalicoConfigManagedResourceName, "extension-networking-calico", false, data); err != nil {
 		return err
 	}
@@ -343,4 +308,27 @@ func updateAutoDetectionMode(nodes []string) string {
 		return fmt.Sprintf("cidr=%s", strings.Join(nodes, ","))
 	}
 	return ""
+}
+
+func serializeObjects(scheme *runtime.Scheme, objs []client.Object) ([]byte, error) {
+	var data []byte
+	codec := serializer.NewCodecFactory(scheme)
+	si, ok := runtime.SerializerInfoForMediaType(codec.SupportedMediaTypes(), runtime.ContentTypeJSON)
+	if !ok {
+		return nil, fmt.Errorf("could not find encoder for media type %q", runtime.ContentTypeJSON)
+	}
+	for _, obj := range objs {
+		gvk, err := apiutil.GVKForObject(obj, scheme)
+		if err != nil {
+			return nil, fmt.Errorf("could not get gvk for %q of type %T: %w", obj.GetName(), obj, err)
+		}
+		encoder := codec.EncoderForVersion(si.Serializer, gvk.GroupVersion())
+		buffer := bytes.Buffer{}
+		if err := encoder.Encode(obj, &buffer); err != nil {
+			return nil, fmt.Errorf("could not encode object %q of type %T: %w", obj.GetName(), obj, err)
+		}
+		data = append(data, []byte("\n---\n")...)
+		data = append(data, buffer.Bytes()...)
+	}
+	return data, nil
 }

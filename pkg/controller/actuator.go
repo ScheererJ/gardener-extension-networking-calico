@@ -10,23 +10,23 @@ import (
 	gardenerkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	calicov1alpha1 "github.com/gardener/gardener-extension-networking-calico/pkg/apis/calico/v1alpha1"
 )
 
-var (
-	// StatusTypeMeta is the TypeMeta of Calico Status
-	StatusTypeMeta = metav1.TypeMeta{
-		APIVersion: calicov1alpha1.SchemeGroupVersion.String(),
-		Kind:       "NetworkStatus",
-	}
-)
+// StatusTypeMeta is the TypeMeta of Calico Status
+var StatusTypeMeta = metav1.TypeMeta{
+	APIVersion: calicov1alpha1.SchemeGroupVersion.String(),
+	Kind:       "NetworkStatus",
+}
 
 type actuator struct {
 	restConfig *rest.Config
 	client     client.Client
+	clock      clock.Clock
 
 	chartRendererFactory extensionscontroller.ChartRendererFactory
 	chartApplier         gardenerkubernetes.ChartApplier
