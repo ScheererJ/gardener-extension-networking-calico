@@ -10,6 +10,7 @@ ADMISSION_NAME              := admission-calico
 CNI_PLUGINS_NAME            := cni-plugins
 REGISTRY                    := europe-docker.pkg.dev/gardener-project/public/gardener
 IMAGE_PREFIX                := $(REGISTRY)/extensions
+BUILD_DATE                  := $(shell date '+%Y-%m-%dT%H:%M:%S%z' | sed 's/\([0-9][0-9]\)$$/:\1/g')
 REPO_ROOT                   := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 HACK_DIR                    := $(REPO_ROOT)/hack
 VERSION                     := $(shell cat "$(REPO_ROOT)/VERSION")
@@ -43,6 +44,14 @@ include $(GARDENER_HACK_DIR)/tools.mk
 #########################################
 # Rules for local development scenarios #
 #########################################
+
+export SOURCE_DATE_EPOCH = $(shell date -d $(BUILD_DATE) +%s)
+# use static label for skaffold to prevent rolling all gardener components on every `skaffold` invocation
+export SKAFFOLD_LABEL = "skaffold.dev/run-id=gardener-local"
+export SKAFFOLD_DEFAULT_REPO = garden.local.gardener.cloud:5001
+export SKAFFOLD_PUSH = true
+skaffold-up: $(SKAFFOLD)
+	GARDENER_HACK_DIR=$(GARDENER_HACK_DIR) effective_version=$(EFFECTIVE_VERSION) $(SKAFFOLD) run 
 
 .PHONY: start
 start:

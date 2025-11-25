@@ -1,0 +1,44 @@
+apiVersion: skaffold/v4beta7
+kind: Config
+metadata:
+  name: gardener-extension-networking-calico
+build:
+  insecureRegistries:
+    - garden.local.gardener.cloud:5001
+  artifacts:
+    - image: gardener-project/public/gardener/extensions/networking-calico
+      docker: 
+        buildArgs: 
+          EFFECTIVE_VERSION: ${effective_version}
+        target: gardener-extension-networking-calico
+    - image: gardener-project/public/charts/gardener/extensions/networking-calico
+      custom:
+        buildCommand: |
+          bash ${GARDENER_HACK_DIR}/push-helm.sh ./charts/gardener-extension-networking-calico .image.ref
+      requires:
+        - image: gardener-project/public/gardener/extensions/networking-calico
+          alias: IMG
+manifests:
+  remoteManifests:
+    - manifest: garden:extensions.operator.gardener.cloud/networking-calico
+  hooks:
+    before:
+    - host:
+        # set oci repositories to the image so that skaffold will overwrite it with the built image
+        command:
+          - bash
+          - -c 
+          - kubectl patch -n garden extensions.operator.gardener.cloud/networking-calico --type=merge -p '{"spec":{"deployment":{"extension":{"helm":{"ociRepository":{"ref":"gardener-project/public/charts/gardener/extensions/networking-calico:v0.0.0","repository":null,"tag":null}}}}}}' 
+deploy:
+  kubectl: 
+    flags:
+      apply:
+        - --server-side
+        - --force-conflicts
+resourceSelector:
+  # instruct skaffold to inject the built image reference into the image field in our ControllerDeployment
+  allow:
+    - groupKind: Extension.operator.gardener.cloud
+      image:
+        - .spec.deployment.extension.helm.ociRepository.ref
+

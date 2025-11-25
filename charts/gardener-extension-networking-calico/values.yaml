@@ -1,4 +1,5 @@
 image:
+  ref: ""
   repository: europe-docker.pkg.dev/gardener-project/public/gardener/extensions/networking-calico
   tag: latest
   pullPolicy: IfNotPresent

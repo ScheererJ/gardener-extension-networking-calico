@@ -12,7 +12,8 @@ COPY . .
 
 ARG EFFECTIVE_VERSION
 
-RUN make install EFFECTIVE_VERSION=$EFFECTIVE_VERSION
+RUN --mount=type=cache,target=/root/.cache/go-build \
+  make install EFFECTIVE_VERSION=$EFFECTIVE_VERSION
 
 ############# gardener-extension-networking-calico
 FROM gcr.io/distroless/static-debian12:nonroot AS gardener-extension-networking-calico
