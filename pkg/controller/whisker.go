@@ -70,9 +70,8 @@ func WhiskerResources(keyPair certificatemanagement.KeyPairInterface, trustBundl
 	for _, objToCreate := range objsToCreate {
 		objToCreate.SetNamespace(metav1.NamespaceSystem)
 		objToCreate.SetLabels(utils.MergeStringMaps(objToCreate.GetLabels(), map[string]string{
-			"app.kubernetes.io/name":           "whisker",
-			"k8s-app":                          "whisker",
-			"networking.gardener.cloud/to-dns": "allowed",
+			"app.kubernetes.io/name": "whisker",
+			"k8s-app":                "whisker",
 		}))
 		gvk, err := apiutil.GVKForObject(objToCreate, scheme)
 		if err != nil {
@@ -86,8 +85,9 @@ func WhiskerResources(keyPair certificatemanagement.KeyPairInterface, trustBundl
 				},
 			}
 			deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
-				"app.kubernetes.io/name": "whisker",
-				"k8s-app":                "whisker",
+				"app.kubernetes.io/name":           "whisker",
+				"k8s-app":                          "whisker",
+				"networking.gardener.cloud/to-dns": "allowed",
 			})
 			for i, container := range deployment.Spec.Template.Spec.Containers {
 				for j, env := range container.Env {
