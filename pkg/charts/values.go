@@ -28,8 +28,10 @@ func RenderCalicoChart(
 	nodeCIDR *string,
 	podCidrs []string,
 	ipFamilies []extensionsv1alpha1.IPFamily,
+	typhaCertSecretName string,
+	nodeCertSecretName string,
 ) ([]byte, error) {
-	values, err := ComputeCalicoChartValues(network, config, kubernetesVersion, wantsVPA, kubeProxyEnabled, nonPrivileged, nodeCIDR, podCidrs, ipFamilies)
+	values, err := ComputeCalicoChartValues(network, config, kubernetesVersion, wantsVPA, kubeProxyEnabled, nonPrivileged, nodeCIDR, podCidrs, ipFamilies, typhaCertSecretName, nodeCertSecretName)
 	if err != nil {
 		return nil, err
 	}

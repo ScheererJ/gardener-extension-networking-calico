@@ -39,6 +39,9 @@ spec:
       nodeSelector:
         kubernetes.io/os: linux
       hostNetwork: true
+      # we need to resolve the goldmane service dns, therefore try to resolve using kube-dns first
+      # By default if running in hostNetwork, the pod does not use kube-dns entries to resolve records
+      dnsPolicy: ClusterFirstWithHostNet
       tolerations:
         # Make sure calico-node gets scheduled on all nodes.
         - effect: NoSchedule
@@ -319,6 +322,18 @@ spec:
                 configMapKeyRef:
                   name: calico-config
                   key: typha_service_name
+            - name: FELIX_TYPHACAFILE
+              value: /node-certs/ca.crt
+            - name: FELIX_TYPHACERTFILE
+              value: /node-certs/tls.crt
+            - name: FELIX_TYPHAKEYFILE
+              value: /node-certs/tls.key
+            - name: FELIX_TYPHACN
+              value: "typha-server"
+            - name: FELIX_FLOWLOGSGOLDMANESERVER
+              value: goldmane.kube-system.svc:7443
+            - name: FELIX_FLOWLOGSFLUSHINTERVAL
+              value: "15"
             # Wait for the datastore.
             - name: WAIT_FOR_DATASTORE
               value: "true"
@@ -507,6 +522,9 @@ spec:
             - mountPath: /run/xtables.lock
               name: xtables-lock
               readOnly: false
+            - mountPath: /node-certs
+              name: node-certs
+              readOnly: true
             {{- if not .Values.config.nonPrivileged }}
             - mountPath: /var/run/calico
               name: var-run-calico
@@ -566,6 +584,9 @@ spec:
         - name: lib-modules
           hostPath:
             path: /lib/modules
+        - name: node-certs
+          secret:
+            secretName: {{ .Values.config.felix.cert.secret }}
         {{- if not .Values.config.nonPrivileged }}
         - name: var-run-calico
           hostPath:

@@ -21,6 +21,8 @@ config:
   kubeControllers:
     enabled: true
   typha:
+    cert:
+      secret: ""
     enabled: true
   ipv4:
     enabled: true
@@ -36,6 +38,8 @@ config:
     natOutgoing: false
     wireguard: false
   felix:
+    cert:
+      secret: ""
     ipinip:
       enabled: "true"
     bpf:

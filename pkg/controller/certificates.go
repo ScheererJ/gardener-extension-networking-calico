@@ -23,11 +23,11 @@ type certificateManager struct {
 	sm secretsmanager.Interface
 }
 
-func (m *certificateManager) KeyPair(ctx context.Context, component string) (certificatemanagement.KeyPairInterface, error) {
+func (m *certificateManager) KeyPair(ctx context.Context, component, commonNameSuffix string) (certificatemanagement.KeyPairInterface, error) {
 	if _, err := m.getCA(caName); err != nil {
 		return nil, fmt.Errorf("getting ca: %w", err)
 	}
-	compCert, err := m.generateClientServerCert(ctx, component, caName)
+	compCert, err := m.generateClientServerCert(ctx, component, caName, commonNameSuffix)
 	if err != nil {
 		return nil, fmt.Errorf("generating cert %w", err)
 	}
@@ -77,10 +77,10 @@ func (m *certificateManager) getCA(name string) (*certificate, error) {
 	}, nil
 }
 
-func (m *certificateManager) generateClientServerCert(ctx context.Context, name, caName string) (*corev1.Secret, error) {
+func (m *certificateManager) generateClientServerCert(ctx context.Context, name, caName, commonNameSuffix string) (*corev1.Secret, error) {
 	return m.sm.Generate(ctx, &secrets.CertificateSecretConfig{
 		Name:       name,
-		CommonName: name + "-client",
+		CommonName: name + "-" + commonNameSuffix,
 		DNSNames: []string{
 			name,
 			fmt.Sprintf("%s.kube-system", name),

@@ -44,6 +44,7 @@ type felix struct {
 	IPInIP                      felixIPinIP                      `json:"ipinip"`
 	BPF                         felixBPF                         `json:"bpf"`
 	BPFKubeProxyIptablesCleanup felixBPFKubeProxyIptablesCleanup `json:"bpfKubeProxyIPTablesCleanup"`
+	Cert                        certConfig                       `json:"cert"`
 }
 
 type felixIPinIP struct {
@@ -102,7 +103,12 @@ type monitoring struct {
 }
 
 type typha struct {
-	Enabled bool `json:"enabled"`
+	Enabled bool       `json:"enabled"`
+	Cert    certConfig `json:"cert"`
+}
+
+type certConfig struct {
+	Secret string `json:"secret"`
 }
 
 type birdExporter struct {
@@ -182,8 +188,10 @@ func ComputeCalicoChartValues(
 	nodeCIDR *string,
 	podCIDRs []string,
 	ipFamilies []extensionsv1alpha1.IPFamily,
+	typhaCertSecretName string,
+	nodeCertSecretName string,
 ) (map[string]interface{}, error) {
-	typedConfig, err := generateChartValues(network, config, kubeProxyEnabled, nonPrivileged, ipFamilies)
+	typedConfig, err := generateChartValues(network, config, kubeProxyEnabled, nonPrivileged, ipFamilies, typhaCertSecretName, nodeCertSecretName)
 	if err != nil {
 		return nil, fmt.Errorf("error when generating calico config: %v", err)
 	}
@@ -253,11 +261,24 @@ func ComputeCalicoChartValues(
 	return calicoChartValues, nil
 }
 
-func generateChartValues(network *extensionsv1alpha1.Network, config *calicov1alpha1.NetworkConfig, kubeProxyEnabled bool, nonPrivileged bool, ipFamilies []extensionsv1alpha1.IPFamily) (*calicoConfig, error) {
+func generateChartValues(network *extensionsv1alpha1.Network,
+	config *calicov1alpha1.NetworkConfig,
+	kubeProxyEnabled bool,
+	nonPrivileged bool,
+	ipFamilies []extensionsv1alpha1.IPFamily,
+	typhaCertSecretName string,
+	nodeCertSecretName string,
+) (*calicoConfig, error) {
 	isIPv4 := slices.Contains(ipFamilies, extensionsv1alpha1.IPFamilyIPv4)
 	isIPv6 := slices.Contains(ipFamilies, extensionsv1alpha1.IPFamilyIPv6)
 
 	c := newCalicoConfig()
+	c.Felix.Cert = certConfig{
+		Secret: nodeCertSecretName,
+	}
+	c.Typha.Cert = certConfig{
+		Secret: typhaCertSecretName,
+	}
 	if isIPv4 {
 		c.IPAM.AssignIPv4 = true
 		c.IPAM.Subnet = usePodCIDR

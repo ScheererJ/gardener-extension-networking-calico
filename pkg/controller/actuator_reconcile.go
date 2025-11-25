@@ -94,7 +94,10 @@ func applyMonitoringConfig(ctx context.Context, seedClient client.Client, chartA
 }
 
 // Reconcile implements Network.Actuator.
-func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, network *extensionsv1alpha1.Network, cluster *extensionscontroller.Cluster) error {
+func (a *actuator) Reconcile(ctx context.Context, l logr.Logger, network *extensionsv1alpha1.Network, cluster *extensionscontroller.Cluster) error {
+	if extensionscontroller.IsHibernated(cluster) {
+		return nil
+	}
 	if errList := validation.ValidateNetwork(network); len(errList) != 0 {
 		return fmt.Errorf("invalid network resource: %w", errList.ToAggregate())
 	}
@@ -196,6 +199,28 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, network *extens
 		podCIDRs = cluster.Shoot.Status.Networking.Pods
 	}
 
+	_, c, err := util.NewClientForShoot(ctx, a.client, network.Namespace, client.Options{}, extensionsconfig.RESTOptions{})
+	if err != nil {
+		return fmt.Errorf("could not create shoot client for shoot '%s': %w", network.Namespace, err)
+	}
+	sm, err := manager.New(ctx, l, clock.RealClock{}, c, "kube-system", "calico", manager.Config{})
+	if err != nil {
+		panic(err)
+	}
+	cm := NewCertificateManger(sm)
+	tr, err := cm.TrustBundle(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	typhaKey, err := cm.KeyPair(ctx, "typha", "server")
+	if err != nil {
+		return err
+	}
+	nodeKey, err := cm.KeyPair(ctx, "node", "client")
+	if err != nil {
+		return err
+	}
+
 	calicoChart, err := chartspkg.RenderCalicoChart(
 		chartRenderer,
 		network,
@@ -207,66 +232,53 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, network *extens
 		cluster.Shoot.Spec.Networking.Nodes,
 		podCIDRs,
 		ipFamilies,
+		typhaKey.GetName(),
+		nodeKey.GetName(),
 	)
 	if err != nil {
 		return err
 	}
 
 	whiskerComponents := map[string][]byte{}
-	if !extensionscontroller.IsHibernated(cluster) {
-		_, c, err := util.NewClientForShoot(ctx, a.client, network.Namespace, client.Options{}, extensionsconfig.RESTOptions{})
-		if err != nil {
-			return fmt.Errorf("could not create shoot client for shoot '%s': %w", network.Namespace, err)
-		}
-		sm, err := manager.New(context.Background(), logr.Discard(), clock.RealClock{}, c, "kube-system", "calico", manager.Config{})
-		if err != nil {
-			panic(err)
-		}
-		cm := NewCertificateManger(sm)
-		tr, err := cm.TrustBundle(context.Background())
-		if err != nil {
-			panic(err)
-		}
-		trustBundleConfigMap := tr.ConfigMap(metav1.NamespaceSystem)
-		gvk, err := apiutil.GVKForObject(trustBundleConfigMap, scheme)
-		if err != nil {
-			return fmt.Errorf("could not get gvk for object %q of type %T: %w", trustBundleConfigMap.GetName(), trustBundleConfigMap, err)
-		}
-		codec := serializer.NewCodecFactory(scheme)
-		si, ok := runtime.SerializerInfoForMediaType(codec.SupportedMediaTypes(), runtime.ContentTypeJSON)
-		if !ok {
-			return fmt.Errorf("could not find encoder for media type %q", runtime.ContentTypeJSON)
-		}
-		encoder := codec.EncoderForVersion(si.Serializer, gvk.GroupVersion())
-		buffer := bytes.Buffer{}
-		if err := encoder.Encode(trustBundleConfigMap, &buffer); err != nil {
-			return fmt.Errorf("could not encode object %q of type %T: %w", trustBundleConfigMap.GetName(), trustBundleConfigMap, err)
-		}
-		whiskerComponents[gvk.Kind+"-"+trustBundleConfigMap.GetName()] = buffer.Bytes()
+	trustBundleConfigMap := tr.ConfigMap(metav1.NamespaceSystem)
+	gvk, err := apiutil.GVKForObject(trustBundleConfigMap, scheme)
+	if err != nil {
+		return fmt.Errorf("could not get gvk for object %q of type %T: %w", trustBundleConfigMap.GetName(), trustBundleConfigMap, err)
+	}
+	codec := serializer.NewCodecFactory(scheme)
+	si, ok := runtime.SerializerInfoForMediaType(codec.SupportedMediaTypes(), runtime.ContentTypeJSON)
+	if !ok {
+		return fmt.Errorf("could not find encoder for media type %q", runtime.ContentTypeJSON)
+	}
+	encoder := codec.EncoderForVersion(si.Serializer, gvk.GroupVersion())
+	buffer := bytes.Buffer{}
+	if err := encoder.Encode(trustBundleConfigMap, &buffer); err != nil {
+		return fmt.Errorf("could not encode object %q of type %T: %w", trustBundleConfigMap.GetName(), trustBundleConfigMap, err)
+	}
+	whiskerComponents[gvk.Kind+"-"+trustBundleConfigMap.GetName()] = buffer.Bytes()
 
-		key, err := cm.KeyPair(context.Background(), "goldmane")
-		if err != nil {
-			panic(err)
-		}
-		data, err := GoldmaneResources(key, tr)
-		if err != nil {
-			panic(err)
-		}
-		for k, v := range data {
-			whiskerComponents[k] = v
-		}
+	key, err := cm.KeyPair(context.Background(), "goldmane", "client")
+	if err != nil {
+		panic(err)
+	}
+	goldMane, err := GoldmaneResources(key, tr)
+	if err != nil {
+		panic(err)
+	}
+	for k, v := range goldMane {
+		whiskerComponents[k] = v
+	}
 
-		whiskerKey, err := cm.KeyPair(context.Background(), "whisker")
-		if err != nil {
-			panic(err)
-		}
-		whiskerData, err := WhiskerResources(whiskerKey, tr)
-		if err != nil {
-			panic(err)
-		}
-		for k, v := range whiskerData {
-			whiskerComponents[k] = v
-		}
+	whiskerKey, err := cm.KeyPair(context.Background(), "whisker", "client")
+	if err != nil {
+		panic(err)
+	}
+	whiskerData, err := WhiskerResources(whiskerKey, tr)
+	if err != nil {
+		panic(err)
+	}
+	for k, v := range whiskerData {
+		whiskerComponents[k] = v
 	}
 
 	data := map[string][]byte{chartspkg.CalicoConfigKey: calicoChart}

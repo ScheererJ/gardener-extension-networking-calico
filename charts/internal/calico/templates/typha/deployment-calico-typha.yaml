@@ -72,10 +72,18 @@ spec:
         - 1
         seccompProfile:
           type: RuntimeDefault
+      volumes:
+        - name: typha-certs
+          secret:
+            secretName: {{ .Values.config.typha.cert.secret }}
       containers:
       - image: {{ index .Values.images "calico-typha" }}
         imagePullPolicy: IfNotPresent
         name: calico-typha
+        volumeMounts:
+          - mountPath: /typha-certs
+            name: typha-certs
+            readOnly: true
         ports:
         - containerPort: 5473
           name: calico-typha
@@ -112,6 +120,14 @@ spec:
             value: "kubernetes"
           - name: TYPHA_HEALTHENABLED
             value: "true"
+          - name: TYPHA_CLIENTCN
+            value: "node-client"
+          - name: TYPHA_SERVERCERTFILE
+            value: "/typha-certs/tls.crt"
+          - name: TYPHA_SERVERKEYFILE
+            value: "/typha-certs/tls.key"
+          - name: TYPHA_CAFILE
+            value: "/typha-certs/ca.crt"
           # Set this to the same value as terminationGracePeriodSeconds; it tells Typha how much time
           # it has to shut down.
           - name: TYPHA_SHUTDOWNTIMEOUTSECS
@@ -146,4 +162,5 @@ spec:
             host: localhost
           periodSeconds: 10
           timeoutSeconds: 10
+      
 {{- end }}

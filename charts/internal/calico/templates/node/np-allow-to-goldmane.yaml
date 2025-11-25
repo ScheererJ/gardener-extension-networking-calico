@@ -1,25 +1,25 @@
----
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   annotations:
     gardener.cloud/description: |
-      Allows traffic from calico node
-  name: gardener.cloud--allow-from-calico-node
+      Allows traffic from calico node to goldmane
+  name: gardener.cloud--allow-from-calico-node-to-goldmane
   namespace: kube-system
   labels:
     origin: gardener
 spec:
-  ingress:
-  - from:
+  egress:
+  - to:
     - podSelector:
         matchLabels:
-          k8s-app: calico-node
+          app.kubernetes.io/name: goldmane
     ports:
-    - port: 5473
+    - port: 7443
       protocol: TCP
   podSelector:
     matchLabels:
-      k8s-app: calico-typha
+      k8s-app: calico-node
   policyTypes:
-  - Ingress
+  - Egress
+
