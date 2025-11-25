@@ -5,13 +5,16 @@
 package controller
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net"
 	"slices"
 	"strings"
 
+	extensionsconfig "github.com/gardener/gardener/extensions/pkg/apis/config/v1alpha1"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	"github.com/gardener/gardener/extensions/pkg/util"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -19,12 +22,18 @@ import (
 	gardenerkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/chart"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/go-logr/logr"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/gardener/gardener-extension-networking-calico/charts"
 	calicov1alpha1 "github.com/gardener/gardener-extension-networking-calico/pkg/apis/calico/v1alpha1"
@@ -203,7 +212,67 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, network *extens
 		return err
 	}
 
+	whiskerComponents := map[string][]byte{}
+	if !extensionscontroller.IsHibernated(cluster) {
+		_, c, err := util.NewClientForShoot(ctx, a.client, network.Namespace, client.Options{}, extensionsconfig.RESTOptions{})
+		if err != nil {
+			return fmt.Errorf("could not create shoot client for shoot '%s': %w", network.Namespace, err)
+		}
+		sm, err := manager.New(context.Background(), logr.Discard(), clock.RealClock{}, c, "kube-system", "calico", manager.Config{})
+		if err != nil {
+			panic(err)
+		}
+		cm := NewCertificateManger(sm)
+		tr, err := cm.TrustBundle(context.Background())
+		if err != nil {
+			panic(err)
+		}
+		trustBundleConfigMap := tr.ConfigMap(metav1.NamespaceSystem)
+		gvk, err := apiutil.GVKForObject(trustBundleConfigMap, scheme)
+		if err != nil {
+			return fmt.Errorf("could not get gvk for object %q of type %T: %w", trustBundleConfigMap.GetName(), trustBundleConfigMap, err)
+		}
+		codec := serializer.NewCodecFactory(scheme)
+		si, ok := runtime.SerializerInfoForMediaType(codec.SupportedMediaTypes(), runtime.ContentTypeJSON)
+		if !ok {
+			return fmt.Errorf("could not find encoder for media type %q", runtime.ContentTypeJSON)
+		}
+		encoder := codec.EncoderForVersion(si.Serializer, gvk.GroupVersion())
+		buffer := bytes.Buffer{}
+		if err := encoder.Encode(trustBundleConfigMap, &buffer); err != nil {
+			return fmt.Errorf("could not encode object %q of type %T: %w", trustBundleConfigMap.GetName(), trustBundleConfigMap, err)
+		}
+		whiskerComponents[gvk.Kind+"-"+trustBundleConfigMap.GetName()] = buffer.Bytes()
+
+		key, err := cm.KeyPair(context.Background(), "goldmane")
+		if err != nil {
+			panic(err)
+		}
+		data, err := GoldmaneResources(key, tr)
+		if err != nil {
+			panic(err)
+		}
+		for k, v := range data {
+			whiskerComponents[k] = v
+		}
+
+		whiskerKey, err := cm.KeyPair(context.Background(), "whisker")
+		if err != nil {
+			panic(err)
+		}
+		whiskerData, err := WhiskerResources(whiskerKey, tr)
+		if err != nil {
+			panic(err)
+		}
+		for k, v := range whiskerData {
+			whiskerComponents[k] = v
+		}
+	}
+
 	data := map[string][]byte{chartspkg.CalicoConfigKey: calicoChart}
+	for k, v := range whiskerComponents {
+		data[k] = v
+	}
 	if err := managedresources.CreateForShoot(ctx, a.client, network.Namespace, CalicoConfigManagedResourceName, "extension-networking-calico", false, data); err != nil {
 		return err
 	}

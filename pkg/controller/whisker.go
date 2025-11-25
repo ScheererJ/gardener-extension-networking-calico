@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gardener/gardener/pkg/utils"
 	operatorv1 "github.com/tigera/operator/api/v1"
-	"github.com/tigera/operator/pkg/components"
 	"github.com/tigera/operator/pkg/render/whisker"
 	"github.com/tigera/operator/pkg/tls/certificatemanagement"
 	appsv1 "k8s.io/api/apps/v1"
@@ -21,8 +21,6 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
-
-	"github.com/gardener/gardener/pkg/utils"
 )
 
 var scheme *runtime.Scheme
@@ -33,7 +31,7 @@ func init() {
 }
 
 func WhiskerResources(keyPair certificatemanagement.KeyPairInterface, trustBundle certificatemanagement.TrustedBundleRO) (map[string][]byte, error) {
-	components.ComponentCalicoWhisker = components.Component{
+	/*components.ComponentCalicoWhisker = components.Component{
 		Image:    "calico/whisker",
 		Version:  "v1.0.0",
 		Registry: "quay.io/any/random/path/",
@@ -42,7 +40,7 @@ func WhiskerResources(keyPair certificatemanagement.KeyPairInterface, trustBundl
 		Image:    "calico/whisker-backend",
 		Version:  "v1.0.0",
 		Registry: "quay.io/any/random/path/",
-	}
+	}*/
 	w := whisker.Whisker(&whisker.Configuration{
 		CalicoVersion: "3.30.3",
 		ClusterDomain: "cluster.local",
@@ -72,8 +70,9 @@ func WhiskerResources(keyPair certificatemanagement.KeyPairInterface, trustBundl
 	for _, objToCreate := range objsToCreate {
 		objToCreate.SetNamespace(metav1.NamespaceSystem)
 		objToCreate.SetLabels(utils.MergeStringMaps(objToCreate.GetLabels(), map[string]string{
-			"app.kubernetes.io/name": "whisker",
-			"k8s-app":                "whisker",
+			"app.kubernetes.io/name":           "whisker",
+			"k8s-app":                          "whisker",
+			"networking.gardener.cloud/to-dns": "allowed",
 		}))
 		gvk, err := apiutil.GVKForObject(objToCreate, scheme)
 		if err != nil {

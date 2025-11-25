@@ -8,13 +8,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gardener/gardener-extension-networking-calico/pkg/controller"
 	"github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/go-logr/logr"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"github.com/gardener/gardener-extension-networking-calico/pkg/controller"
 )
 
 func main() {
@@ -53,6 +54,18 @@ func main() {
 		panic(err)
 	}
 	for k, v := range data {
+		fmt.Printf("=== %s ===\n%s\n", k, v)
+	}
+
+	whiskerKey, err := cm.KeyPair(context.Background(), "whisker")
+	if err != nil {
+		panic(err)
+	}
+	whiskerData, err := controller.WhiskerResources(whiskerKey, tr)
+	if err != nil {
+		panic(err)
+	}
+	for k, v := range whiskerData {
 		fmt.Printf("=== %s ===\n%s\n", k, v)
 	}
 }
