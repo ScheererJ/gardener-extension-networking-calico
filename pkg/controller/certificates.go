@@ -81,7 +81,13 @@ func (m *certificateManager) generateClientServerCert(ctx context.Context, name,
 	return m.sm.Generate(ctx, &secrets.CertificateSecretConfig{
 		Name:       name,
 		CommonName: name + "-client",
-		CertType:   secrets.ServerClientCert,
+		DNSNames: []string{
+			name,
+			fmt.Sprintf("%s.kube-system", name),
+			fmt.Sprintf("%s.kube-system.svc", name),
+			fmt.Sprintf("%s.kube-system.svc.cluster.local", name),
+		},
+		CertType: secrets.ServerClientCert,
 	}, secretsmanager.SignedByCA(caName))
 }
 
